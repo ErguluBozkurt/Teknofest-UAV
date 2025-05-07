@@ -16,8 +16,8 @@ Aşağıdaki Python modüllerinin kurulu olması gerekir:
 
 - dronekit
 - pymavlink
-- distance
-- data_logger
+- distance (Yazılı modül)
+- data_logger (Yazılı modül)
 
 Kurulum için:
 

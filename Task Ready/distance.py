@@ -1,86 +1,121 @@
-# coding: utf8
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import task 
+import torch
+from ultralytics import YOLO
 
+# Nesnenin bilinen özellikleri
+KNOWN_DISTANCE = 0.762  # metre
+KNOWN_WIDTH = 0.143     # metre (nesnenin gerçek genişliği)
 
-def display(img, cmap='gray'):
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(1, 1, 1)  
-    ax.imshow(img, cmap='gray')
-    plt.pause(1)
+# Fiziksel parametreler
+h = 50  # m yükseklik
+g = 9.81  # yer çekimi
+k = 0.32  # hava sürtünme katsayısı
+r = 0.036  # m cinsinden yarıçap (3.6 cm)
+m = 0.7  # kg
+Vx = 9  # m/s uçak hızı
+Vc = 5  # m/s hedef hızı
+WIND_V = 5  # m/s rüzgar
 
-Known_distance = 0.762  #kameradaki uzaklık
-Known_width = 0.143  #resimdeki uzaklık metre
-
+# Renk tanımları
 GREEN = (0, 255, 0)
 RED = (0, 0, 255)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+FONTS = cv2.FONT_HERSHEY_COMPLEX
 
-fonts = cv2.FONT_HERSHEY_COMPLEX
-face_detector = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-def Focal_Length_Finder(measured_distance, real_width, width_in_rf_image):
-	focal_length = (width_in_rf_image * measured_distance) / real_width   # uzaklık bulma
-	return focal_length
+# Model yükleme
+model = YOLO("best.pt")
 
-def Distance_finder(Focal_Length, real_face_width, face_width_in_frame):  # mesafe tahmin fonksiyonu
-	distance = (real_face_width * Focal_Length)/face_width_in_frame
-	return distance
+# Fokal uzunluk hesaplayıcı
+def focal_length_finder(measured_distance, real_width, width_in_rf_image):
+    return (width_in_rf_image * measured_distance) / real_width
 
-def face_data(image):
-	face_width = 0 
-	gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # gri ton renk      
-	faces = face_detector.detectMultiScale(gray_image, 1.3, 5)  # yüz algılama
+# Mesafe hesaplayıcı
+def distance_finder(focal_length, real_object_width, object_width_in_frame):
+    if object_width_in_frame == 0:
+        return 0
+    return (real_object_width * focal_length) / object_width_in_frame
 
-	
-	
-	for (x, y, h, w) in faces:	# x, y  kalınlık ve yükseklik
-		cv2.rectangle(image, (x, y), (x+w, y+h), GREEN, 2)  # yüz içi kare kutucuk
-		face_width = w  # yüz genişliği ayarlaması
-	return face_width
+# Görüntüde nesnenin genişliğini tespit et
+def get_object_width(image, class_name="target"):
+    results = model(image)[0]
+    for box in results.boxes:
+        cls = int(box.cls[0])
+        label = model.names[cls]
+        if label == class_name:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            cv2.rectangle(image, (x1, y1), (x2, y2), GREEN, 2)
+            return x2 - x1  # nesnenin piksel cinsinden genişliği
+    return 0
 
-ref_image = cv2.imread("Codes\WIN_20221127_16_53_15_Pro.jpg")  # resim kaydedilen yerin adresi
-ref_image_face_width = face_data(ref_image)
-Focal_length_found = Focal_Length_Finder(Known_distance, Known_width, ref_image_face_width)  # Known_distance(meters),
-                                                                                             # known_width(meters)
-print(Focal_length_found)
+# Atış kararı fonksiyonu
+def shoot(distance):
+    A = round(np.pi * (r ** 2), 5)
+    t = round(np.sqrt((2 * h) / g), 3)
+    Vy = round(g * t, 3)
 
-cv2.imshow("Kamera", ref_image) #kamerada göster
+    fs1 = round(k * A * (Vy ** 2), 3)
+    fs1 = round((fs1 - (m * g)), 3)
+    a1 = round(fs1 / m, 3)
+    Vy_net = round(Vy - (-a1 * t) - WIND_V, 3)
+    t_net = round(Vy_net / g, 3)
+
+    fs2 = round(k * A * (Vx ** 2), 3)
+    a2 = round(fs2 / m, 3)
+    Vx_net = round(Vx - (a2 * t), 3)
+
+    x1 = round(Vx_net * t_net, 3)
+    x2 = round(Vc * t_net, 3)
+    X = x1 - x2
+
+    diff = round(X - distance, 2)
+    print(f"Atış Mesafesi ile Hedef Arası Fark: {diff} m")
+    
+    if -2.5 < diff < 2.5:
+        return "🎯 Atış yapılabilir!"
+    else:
+        return "🚫 Atış yapılmaz, hedef menzilde değil."
+
+# Kalibrasyon için referans görüntü
+ref_image_path = "ref.jpg"
+ref_image = cv2.imread(ref_image_path)
+ref_width = get_object_width(ref_image, class_name="target")
+
+if ref_width == 0:
+    print("Hata: Referans görüntüde hedef nesne bulunamadı!")
+    exit()
+
+FOCAL_LENGTH = focal_length_finder(KNOWN_DISTANCE, KNOWN_WIDTH, ref_width)
+print(f"Bulunan Fokal Uzunluk: {FOCAL_LENGTH}")
+
+# Kamera aç
 cap = cv2.VideoCapture(0)
 
-yuz_ismi = 1  # yeni çekilecek kişi için değiştirmememiz gerkli
-sayi = 1  # kaç fotoraf çekileceğimimizi saydırmak için 
-yukseklik = task.iha.location.global_relative_frame.alt
-
 while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-	_, frame = cap.read()  #kamera okutuldu
-	gri = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  #resim rengi için gri yapıldı  
-	yuzler = face_detector.detectMultiScale(gri, 1.3, 5)
+    width_in_frame = get_object_width(frame, class_name="target")
     
-	face_width_in_frame = face_data(frame)
-	if face_width_in_frame != 0:
-		Distance = Distance_finder(Focal_length_found, Known_width, face_width_in_frame)    # Known_width(meters)
-	                                                                                    	# and Known_distance(meters)
-		cv2.line(frame, (30, 30), (230, 30), RED, 32)   # metnin arka planına hat çiz
-		cv2.line(frame, (30, 30), (230, 30), BLACK, 28)
+    if width_in_frame != 0:
+        distance = distance_finder(FOCAL_LENGTH, KNOWN_WIDTH, width_in_frame)
+        distance = round(distance, 2)
+        
+        # Mesafe bilgisini ekrana yaz
+        cv2.line(frame, (30, 30), (300, 30), RED, 32)
+        cv2.line(frame, (30, 30), (300, 30), BLACK, 28)
+        cv2.putText(frame, f"Mesafe: {distance} m", (30, 35), FONTS, 0.6, WHITE, 1)
+        
+        # Atış kararını al ve ekrana yaz
+        decision = shoot(distance)
+        cv2.putText(frame, decision, (30, 70), FONTS, 0.6, WHITE, 1)
 
-		
-		cv2.putText(frame, f"Mesafe: {round(Distance,2)} Metre ",  (30, 35),fonts, 0.6, WHITE, 1)  # Ekran üstünde uzaklık gösterimi
-  
-		
-		cv2.line(frame, (620, 30), (390, 30), RED, 32)   # metnin arka planına hat çiz
-		cv2.line(frame, (620, 30), (390, 30), BLACK, 28)
-		cv2.putText(frame, f"Yukseklik: {round(yukseklik,2)} Metre ",  (390, 35),fonts, 0.6, WHITE, 1) # iha yükseklik ekran da gösterdi
-  
-	cv2.imshow("Kamera", frame)
-
-	if cv2.waitKey(1) == ord("q"):
-		break
-	
-	
+    cv2.imshow("Kamera", frame)
+    
+    if cv2.waitKey(1) == ord("q"):
+        break
 
 cap.release()
 cv2.destroyAllWindows()

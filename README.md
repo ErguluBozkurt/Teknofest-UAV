@@ -1,6 +1,6 @@
 # Drone Görev Planlama ve Uçuş Otomasyonu
 
-Bu proje, bir İHA'nın (`ArduPilot` tabanlı) belirlenen görev noktalarına otomatik olarak uçmasını, belirli bir irtifada kalkış yapmasını, hız ayarını ve inişi gerçekleştirmesini sağlar. Ayrıca görev sırasında mesafe hesaplaması ve veri kaydı yapılır.
+Bu proje, bir İHA'nın (`ArduPilot` tabanlı) belirlenen görev noktalarına otomatik olarak uçmasını, belirli bir irtifada kalkış yapmasını, hız ayarını ve inişi gerçekleştirmesini sağlar. Ayrıca görev sırasında kamera kullanılarak kara hedefine olan mesafe hesaplanarak belirli irtifa ve hızda, doğru atış zamanı hesaplanaması ve tüm sistemin veri kaydı yapılır.
 
 ## 🚀 Özellikler
 

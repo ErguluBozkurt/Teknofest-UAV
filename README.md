@@ -7,8 +7,8 @@ Bu proje, bir İHA'nın (`ArduPilot` tabanlı) belirlenen görev noktalarına ot
 - Otomatik kalkış ve iniş
 - MAVLink üzerinden görev komutlarının yüklenmesi
 - Belirlenen koordinatlara otomatik uçuş (waypoint'ler)
-- Gerçek zamanlı mesafe hesaplama
-- Uçuş verilerinin kaydı (distance ve data_logger modülleriyle)
+- Gerçek zamanlı kara hedefi için mesafe ve atış zamanı hesaplama (distance)
+- Uçuş verilerinin kaydı (data_logger)
 
 ## 🛠 Gereksinimler
 

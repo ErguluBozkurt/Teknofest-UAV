@@ -1,4 +1,4 @@
-# Drone Görev Planlama, Otonom Hareket ve Uçuş
+# Sabit Kanat Hava Aracı Görev Planlama, Otonom Hareket ve Uçuş
 
 Bu proje, bir İHA'nın (`ArduPilot` tabanlı) belirlenen görev noktalarına otomatik olarak uçmasını, belirli bir irtifada kalkış yapmasını, hız ayarını ve inişi gerçekleştirmesini sağlar. Ayrıca görev sırasında kamera kullanılarak kara hedefine olan mesafe hesaplanarak belirli irtifa ve hızda, doğru atış zamanı matematiksel yöntemler ile belirlenmesi ve tüm sistemin veri kaydı yapılır.
 
